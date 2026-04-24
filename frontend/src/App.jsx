@@ -491,16 +491,24 @@ export default function App() {
         .ai-badge{display:inline-flex;align-items:center;gap:5px;background:#1c1610;border:1px solid #2a2015;border-radius:20px;padding:3px 11px;font-family:'Source Code Pro',monospace;font-size:9px;color:#8a7850;letter-spacing:.8px}
         .cite-bar{padding:8px 20px;border-top:1px solid #1c1610;font-family:'Source Code Pro',monospace;font-size:9px;color:#6a5535;letter-spacing:1px;text-align:right}
         .chat{background:#17120b;border:1px solid #1c1610;border-radius:10px;overflow:hidden;animation:fadeUp .4s .1s ease both}
-        .ch{padding:14px 22px;border-bottom:1px solid #1c1610}
-        .ct{font-family:'Cinzel',serif;font-size:13px;color:#c4a882;letter-spacing:.5px}
-        .cs{font-size:13px;color:#7a6245;font-style:italic;margin-top:2px}
-        .cms{padding:18px 22px;min-height:90px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
+        .ch{padding:18px 26px;border-bottom:1px solid #1c1610;display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .ch-left{display:flex;flex-direction:column;gap:4px}
+        .ct{font-family:'Cinzel',serif;font-size:15px;color:#c4a882;letter-spacing:.8px}
+        .cs{font-size:12px;color:#7a6245;font-style:italic}
+        .ch-badge{display:inline-flex;align-items:center;gap:5px;background:#1c1610;border:1px solid #2a2015;border-radius:20px;padding:4px 12px;font-family:'Source Code Pro',monospace;font-size:9px;color:#8a7255;letter-spacing:.8px;white-space:nowrap}
+        .cms{padding:20px 26px;min-height:100px;max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
         .cempty{color:#6a5535;font-style:italic;font-size:15px;text-align:center;padding:20px 0}
         .msg{display:flex;gap:9px;animation:fadeUp .3s ease}
         .mu{flex-direction:row-reverse}
         .bbl{max-width:78%;padding:11px 15px;border-radius:8px;font-size:15px;line-height:1.75}
         .mu .bbl{background:#1c1610;color:#e2d6bc;border:1px solid #2a2015}
         .ma .bbl{background:#130f08;color:#d8c8a8;border:1px solid #1c1610}
+        .ma .bbl p{margin:0 0 10px;line-height:1.75}.ma .bbl p:last-child{margin-bottom:0}
+        .ma .bbl strong{color:#e2d6bc;font-weight:600}
+        .ma .bbl em{color:#c4a882;font-style:italic}
+        .ma .bbl ul,.ma .bbl ol{padding-left:18px;margin:0 0 10px}
+        .ma .bbl li{margin-bottom:4px;line-height:1.7}
+        .ma .bbl blockquote{border-left:2px solid #c4a882;margin:0 0 10px;padding:2px 0 2px 12px;color:#b8a888;font-style:italic}
         .mg .bbl{background:#1a0e06;color:#cc9955;border:1px solid #3a2010;font-style:italic;display:flex;align-items:flex-start;gap:8px}
         .av{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:3px;font-family:'Cinzel',serif}
         .mu .av{background:#1c1610;color:#c4a882}
@@ -625,8 +633,11 @@ export default function App() {
 
               <div className="chat">
                 <div className="ch">
-                  <div className="ct">{t.chatTitle}</div>
-                  <div className="cs">{t.chatSub} — {theologian.name}</div>
+                  <div className="ch-left">
+                    <div className="ct">{t.chatTitle}</div>
+                    <div className="cs">{t.chatSub}</div>
+                  </div>
+                  <div className="ch-badge"><CrossIcon />{theologian.name}</div>
                 </div>
                 <div className="cms">
                   {chatMessages.length === 0 && <div className="cempty">{t.chatEmpty}</div>}
@@ -638,7 +649,9 @@ export default function App() {
                         <div className="av">{isUser ? "D" : theologian.name[0]}</div>
                         <div className="bbl">
                           {isGuard && <span style={{ opacity: .7, flexShrink: 0 }}><ShieldIcon /></span>}
-                          {m.content}
+                          {isUser || isGuard
+                            ? m.content
+                            : <ReactMarkdown>{m.content}</ReactMarkdown>}
                         </div>
                       </div>
                     );
