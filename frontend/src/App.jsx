@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 // ── Translations ──────────────────────────────────────────────────
 //
@@ -379,9 +380,9 @@ export default function App() {
         .hdr-brand{display:flex;align-items:center;gap:14px}
         .hdr-icon{color:#c4a882;opacity:.75}
         .hdr-name{font-family:'Cinzel',serif;font-size:17px;letter-spacing:3px;text-transform:uppercase;color:#e2d6bc}
-        .hdr-sub{font-size:13px;color:#5a4a32;font-style:italic;margin-top:2px}
+        .hdr-sub{font-size:13px;color:#8a7255;font-style:italic;margin-top:2px}
         .lang-sw{display:flex;border:1px solid #1c1610;border-radius:6px;overflow:hidden}
-        .lang-opt{padding:7px 15px;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;background:transparent;color:#5a4a32;transition:all .2s}
+        .lang-opt{padding:7px 15px;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;background:transparent;color:#8a7255;transition:all .2s}
         .lang-opt.on{background:#c4a882;color:#0b0906;font-weight:600}
         .lang-opt:not(.on):hover{color:#c4a882;background:#17120b}
         .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:34px 42px}
@@ -398,7 +399,7 @@ export default function App() {
         .pkr-opt:last-child{border-bottom:none}
         .pkr-opt:hover{background:#1c1610}
         .pkr-name{font-family:'Cinzel',serif;font-size:11px;color:#e2d6bc;letter-spacing:.4px}
-        .pkr-meta{font-size:11px;color:#5a4a32;font-style:italic;margin-top:1px}
+        .pkr-meta{font-size:11px;color:#8a7255;font-style:italic;margin-top:1px}
         .go-btn{background:#c4a882;border:none;border-radius:7px;padding:12px 24px;color:#0b0906;font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap}
         .go-btn:hover:not(:disabled){background:#d4b890;transform:translateY(-1px)}
         .go-btn:disabled{opacity:.35;cursor:not-allowed}
@@ -409,26 +410,33 @@ export default function App() {
         .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
         .panel{background:#17120b;border:1px solid #1c1610;border-radius:10px;overflow:hidden;animation:fadeUp .4s ease both}
         .ph{padding:13px 20px;border-bottom:1px solid #1c1610;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-        .plabel{font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#5a4a32}
+        .plabel{font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#7a6245}
         .pref{font-family:'Cinzel',serif;font-size:12px;color:#c4a882}
         .pb{padding:20px;max-height:520px;overflow-y:auto}
         .verse{display:flex;gap:11px;margin-bottom:11px}
-        .vn{font-family:'Source Code Pro',monospace;font-size:10px;color:#3a2e1a;min-width:20px;padding-top:3px}
-        .vt{font-size:16px;line-height:1.85;color:#cec0a0}
-        .comm p{font-size:16px;line-height:1.9;color:#ccbc9c;margin-bottom:18px}
+        .vn{font-family:'Source Code Pro',monospace;font-size:10px;color:#6a5535;min-width:20px;padding-top:3px}
+        .vt{font-size:16px;line-height:1.85;color:#ddd0b0}
+        .comm p{font-size:16px;line-height:1.9;color:#d8c8a8;margin-bottom:18px}
+        .comm h1,.comm h2,.comm h3{font-family:'Cinzel',serif;color:#c4a882;letter-spacing:.5px;margin:24px 0 10px}
+        .comm h1{font-size:17px}.comm h2{font-size:15px}.comm h3{font-size:13px}
+        .comm strong{color:#e2d6bc;font-weight:600}
+        .comm em{color:#c4a882;font-style:italic}
+        .comm ul,.comm ol{padding-left:22px;margin-bottom:18px}
+        .comm li{font-size:16px;line-height:1.85;color:#d8c8a8;margin-bottom:6px}
+        .comm blockquote{border-left:2px solid #c4a882;margin:0 0 18px;padding:4px 0 4px 16px;color:#b8a888;font-style:italic}
         .ai-badge{display:inline-flex;align-items:center;gap:5px;background:#1c1610;border:1px solid #2a2015;border-radius:20px;padding:3px 11px;font-family:'Source Code Pro',monospace;font-size:9px;color:#8a7850;letter-spacing:.8px}
-        .cite-bar{padding:8px 20px;border-top:1px solid #1c1610;font-family:'Source Code Pro',monospace;font-size:9px;color:#3a2e1a;letter-spacing:1px;text-align:right}
+        .cite-bar{padding:8px 20px;border-top:1px solid #1c1610;font-family:'Source Code Pro',monospace;font-size:9px;color:#6a5535;letter-spacing:1px;text-align:right}
         .chat{background:#17120b;border:1px solid #1c1610;border-radius:10px;overflow:hidden;animation:fadeUp .4s .1s ease both}
         .ch{padding:14px 22px;border-bottom:1px solid #1c1610}
         .ct{font-family:'Cinzel',serif;font-size:13px;color:#c4a882;letter-spacing:.5px}
-        .cs{font-size:13px;color:#3a2e1a;font-style:italic;margin-top:2px}
+        .cs{font-size:13px;color:#7a6245;font-style:italic;margin-top:2px}
         .cms{padding:18px 22px;min-height:90px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
-        .cempty{color:#2e2418;font-style:italic;font-size:15px;text-align:center;padding:20px 0}
+        .cempty{color:#6a5535;font-style:italic;font-size:15px;text-align:center;padding:20px 0}
         .msg{display:flex;gap:9px;animation:fadeUp .3s ease}
         .mu{flex-direction:row-reverse}
         .bbl{max-width:78%;padding:11px 15px;border-radius:8px;font-size:15px;line-height:1.75}
         .mu .bbl{background:#1c1610;color:#e2d6bc;border:1px solid #2a2015}
-        .ma .bbl{background:#130f08;color:#ccbc9c;border:1px solid #1c1610}
+        .ma .bbl{background:#130f08;color:#d8c8a8;border:1px solid #1c1610}
         .mg .bbl{background:#1a0e06;color:#cc9955;border:1px solid #3a2010;font-style:italic;display:flex;align-items:flex-start;gap:8px}
         .av{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:3px;font-family:'Cinzel',serif}
         .mu .av{background:#1c1610;color:#c4a882}
@@ -441,9 +449,9 @@ export default function App() {
         .sb:hover:not(:disabled){background:#d4b890}
         .sb:disabled{opacity:.3;cursor:not-allowed}
         .empty{text-align:center;padding:68px 20px}
-        .ec{font-size:34px;color:#1c1610;margin-bottom:14px;animation:pulse 3s ease infinite}
-        .et{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:#2e2418;text-transform:uppercase}
-        .es{font-size:13px;font-style:italic;color:#1c1610;margin-top:7px}
+        .ec{font-size:34px;color:#4a3a22;margin-bottom:14px;animation:pulse 3s ease infinite}
+        .et{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:#7a6245;text-transform:uppercase}
+        .es{font-size:13px;font-style:italic;color:#6a5535;margin-top:7px}
       `}</style>
 
       <div className="app">
@@ -493,7 +501,7 @@ export default function App() {
                 <div className="pkr-drop">
                   {THEOLOGIANS.map(th => (
                     <div key={th.id} className="pkr-opt" onClick={() => { setTheologian(th); setOpenPicker(null); }}>
-                      <div className="pkr-name">{th.name} <span style={{ color: "#3a2e1a", fontSize: 10 }}>{th.era}</span></div>
+                      <div className="pkr-name">{th.name} <span style={{ color: "#7a6245", fontSize: 10 }}>{th.era}</span></div>
                       <div className="pkr-meta">{th.desc}</div>
                     </div>
                   ))}
@@ -544,7 +552,7 @@ export default function App() {
                   </div>
                   <div className="pb">
                     <div className="comm">
-                      {commentary.split("\n\n").map((p, i) => p.trim() && <p key={i}>{p.trim()}</p>)}
+                      <ReactMarkdown>{commentary}</ReactMarkdown>
                     </div>
                   </div>
                   <div className="cite-bar">AI-generated · Claude (Anthropic) · Not verbatim {theologian.name}</div>
