@@ -179,6 +179,70 @@ const UI = {
   },
 };
 
+// ── Passage reference normaliser ──────────────────────────────────
+// Fuzzy-corrects the book name so minor typos ("Jhon", "Genisis") still work.
+const BOOKS = [
+  ["Genesis","gen","ge","gn"],["Exodus","exo","ex","exod"],["Leviticus","lev","le","lv"],
+  ["Numbers","num","nu","nm"],["Deuteronomy","deu","dt","deut"],["Joshua","jos","josh"],
+  ["Judges","jdg","jg","judg"],["Ruth","rut","ru"],["1 Samuel","1sa","1sam"],
+  ["2 Samuel","2sa","2sam"],["1 Kings","1ki","1kgs"],["2 Kings","2ki","2kgs"],
+  ["1 Chronicles","1ch","1chr","1chron"],["2 Chronicles","2ch","2chr","2chron"],
+  ["Ezra","ezr"],["Nehemiah","neh","ne"],["Esther","est","esth"],["Job","jb"],
+  ["Psalms","ps","psa","psalm"],["Proverbs","pro","pr","prov"],
+  ["Ecclesiastes","ecc","ec","eccl"],["Song of Solomon","sng","ss","song","sos"],
+  ["Isaiah","isa","is"],["Jeremiah","jer","je","jr"],["Lamentations","lam","la"],
+  ["Ezekiel","ezk","eze","ezek"],["Daniel","dan","da","dn"],["Hosea","hos","ho"],
+  ["Joel","jol","joe","jl"],["Amos","amo","am"],["Obadiah","oba","ob","obad"],
+  ["Jonah","jon","jnh"],["Micah","mic","mi"],["Nahum","nam","nah","na"],
+  ["Habakkuk","hab"],["Zephaniah","zep","zeph"],["Haggai","hag","hg"],
+  ["Zechariah","zec","zech"],["Malachi","mal","ml"],
+  ["Matthew","mat","mt","matt"],["Mark","mrk","mk","mr"],["Luke","luk","lk"],
+  ["John","jhn","jn"],["Acts","act"],["Romans","rom","ro","rm"],
+  ["1 Corinthians","1co","1cor"],["2 Corinthians","2co","2cor"],
+  ["Galatians","gal","ga"],["Ephesians","eph"],["Philippians","php","phil"],
+  ["Colossians","col"],["1 Thessalonians","1th","1thes","1thess"],
+  ["2 Thessalonians","2th","2thes","2thess"],["1 Timothy","1ti","1tim"],
+  ["2 Timothy","2ti","2tim"],["Titus","tit"],["Philemon","phm","phlm"],
+  ["Hebrews","heb"],["James","jas","jm"],["1 Peter","1pe","1pet"],
+  ["2 Peter","2pe","2pet"],["1 John","1jn","1jo","1jhn"],
+  ["2 John","2jn","2jo","2jhn"],["3 John","3jn","3jo","3jhn"],
+  ["Jude","jud"],["Revelation","rev","re","rv"],
+];
+
+function levenshtein(a, b) {
+  const m = Array.from({length: a.length + 1}, (_, i) => [i]);
+  for (let j = 0; j <= b.length; j++) m[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      m[i][j] = a[i-1] === b[j-1] ? m[i-1][j-1]
+        : 1 + Math.min(m[i-1][j], m[i][j-1], m[i-1][j-1]);
+  return m[a.length][b.length];
+}
+
+function fuzzyBook(input) {
+  const norm = input.toLowerCase().replace(/\s+/g, " ").trim();
+  let best = null, bestDist = Infinity;
+  for (const [canonical, ...aliases] of BOOKS) {
+    for (const form of [canonical.toLowerCase(), ...aliases]) {
+      if (form === norm) return canonical;
+      if (norm.length >= 3 && form.startsWith(norm)) return canonical;
+      const d = levenshtein(norm, form);
+      if (d < bestDist) { bestDist = d; best = canonical; }
+    }
+  }
+  const maxDist = norm.replace(/\s/g, "").length <= 4 ? 1 : 2;
+  return bestDist <= maxDist ? best : input;
+}
+
+function normalizeRef(raw) {
+  const trimmed = raw.trim();
+  const m = trimmed.match(/^(\d\s+)?([a-zA-Z][a-zA-Z\s]*?)\s+(\d[\d:,.\-–—]*)$/);
+  if (!m) return trimmed;
+  const prefix = (m[1] || "").trim();
+  const bookInput = prefix ? `${prefix} ${m[2].trim()}` : m[2].trim();
+  return `${fuzzyBook(bookInput)} ${m[3].trim()}`;
+}
+
 // ── Bible API ─────────────────────────────────────────────────────
 // Source: https://bible-api.com (free, open, no API key required)
 // Underlying Bible data: https://github.com/wldeh/bible-api
@@ -316,7 +380,7 @@ export default function App() {
     setError(""); setPassageData(null); setCommentary(""); setChat([]);
     setLoadingStudy(true);
     try {
-      const data = await fetchPassage(passage.trim(), translation);
+      const data = await fetchPassage(normalizeRef(passage.trim()), translation);
       setPassageData(data);
       const system = buildSystem({ theologianId: theologian.id, translation, uiLang, passageRef: data.reference, passageText: data.text });
       const prompt =
