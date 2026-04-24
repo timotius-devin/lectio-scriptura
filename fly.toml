@@ -1,0 +1,33 @@
+# fly.toml — Fly.io deployment config for Lectio Scriptura
+# Docs: https://fly.io/docs/reference/configuration/
+#
+# This serves both the FastAPI backend AND the built React frontend
+# from a single Fly.io app (no separate frontend hosting needed).
+#
+# Deploy:
+#   fly launch   (first time)
+#   fly deploy   (subsequent deploys)
+#
+# Set your API key (NEVER in this file):
+#   fly secrets set ANTHROPIC_API_KEY=sk-ant-...
+
+app = "lectio-scriptura"        # change this to your app name
+primary_region = "syd"          # Sydney — closest to Melbourne
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
