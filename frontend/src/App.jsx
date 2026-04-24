@@ -311,7 +311,9 @@ do NOT answer it. Return this exact JSON and nothing else:
     .filter(Boolean)
     .join("\n\n");
 
-  return [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, guardrail, ctx]
+  const lengthRule = "LENGTH RULE: You have a 5000-token output limit. Budget your response to finish naturally within it — always end with a complete sentence. Never trail off mid-thought. For commentary, aim for 600–900 words; for chat answers, 200–500 words.";
+
+  return [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, lengthRule, guardrail, ctx]
     .filter(Boolean)
     .join("\n\n");
 }

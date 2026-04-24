@@ -102,11 +102,14 @@ async def chat(req: ChatRequest):
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=1200,
+            max_tokens=5000,
             system=req.system,
             messages=[m.model_dump() for m in req.messages],
         )
-        return ChatResponse(text=response.content[0].text)
+        text = response.content[0].text
+        if response.stop_reason == "max_tokens":
+            text += "\n\n---\n*The response reached the length limit. Ask me to continue if you'd like more.*"
+        return ChatResponse(text=text)
 
     except anthropic.AuthenticationError:
         raise HTTPException(status_code=401, detail="Invalid Anthropic API key.")
