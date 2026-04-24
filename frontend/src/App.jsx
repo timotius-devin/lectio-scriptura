@@ -364,6 +364,7 @@ export default function App() {
   const [chatInput, setChatInput]     = useState("");
   const [loadingStudy, setLoadingStudy] = useState(false);
   const [loadingChat, setLoadingChat]   = useState(false);
+  const [studyTime, setStudyTime]       = useState(null);
   const [error, setError]             = useState("");
   const [openPicker, setOpenPicker]   = useState(null);
   const chatEndRef = useRef(null);
@@ -379,8 +380,9 @@ export default function App() {
 
   async function handleStudy() {
     if (!passage.trim()) return;
-    setError(""); setPassageData(null); setCommentary(""); setChat([]);
+    setError(""); setPassageData(null); setCommentary(""); setChat([]); setStudyTime(null);
     setLoadingStudy(true);
+    const t0 = Date.now();
     try {
       const data = await fetchPassage(normalizeRef(passage.trim()), translation);
       setPassageData(data);
@@ -390,6 +392,7 @@ export default function App() {
           ? `Tolong tulis tafsiran mendalam tentang perikop ini untuk studi Alkitab yang serius.\n\nPerikop: ${data.reference}\n\n${data.text}`
           : `Write a rich, deep commentary on this passage for serious Bible study.\n\nPassage: ${data.reference}\n\n${data.text}`;
       setCommentary(await callClaude([{ role: "user", content: prompt }], system));
+      setStudyTime(((Date.now() - t0) / 1000).toFixed(1));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -404,6 +407,7 @@ export default function App() {
     const newMsgs = [...chatMessages, { role: "user", content: userMsg }];
     setChat(newMsgs);
     setLoadingChat(true);
+    const t0 = Date.now();
     try {
       const system = buildSystem({
         theologianId: theologian.id, translation, uiLang,
@@ -411,14 +415,15 @@ export default function App() {
         priorCommentary: commentary,
       });
       const raw = await callClaude(newMsgs.map(m => ({ role: m.role, content: m.content })), system);
+      const duration = ((Date.now() - t0) / 1000).toFixed(1);
       try {
         const parsed = JSON.parse(raw);
         if (parsed.guardrail) {
-          setChat([...newMsgs, { role: "assistant", content: parsed.message, guardrail: true }]);
+          setChat([...newMsgs, { role: "assistant", content: parsed.message, guardrail: true, duration }]);
           return;
         }
       } catch (_) {}
-      setChat([...newMsgs, { role: "assistant", content: raw }]);
+      setChat([...newMsgs, { role: "assistant", content: raw, duration }]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -515,6 +520,7 @@ export default function App() {
         .av{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:3px;font-family:'Cinzel',serif}
         .mu .av{background:#1c1610;color:#c4a882}
         .ma .av,.mg .av{background:#130f08;color:#c4a882}
+        .msg-time{font-family:'Source Code Pro',monospace;font-size:9px;color:#5a4a32;letter-spacing:.5px;padding-left:2px}
         .cir{padding:13px 22px;border-top:1px solid #1c1610;display:flex;gap:9px}
         .ci{flex:1;background:#0b0906;border:1px solid #1c1610;border-radius:7px;padding:11px 15px;color:#e2d6bc;font-family:'Crimson Pro',serif;font-size:16px;outline:none;resize:none;height:44px;transition:border-color .2s}
         .ci:focus{border-color:#c4a882}
@@ -629,7 +635,7 @@ export default function App() {
                       <ReactMarkdown>{commentary}</ReactMarkdown>
                     </div>
                   </div>
-                  <div className="cite-bar">AI-generated · Claude (Anthropic) · Not verbatim {theologian.name}</div>
+                  <div className="cite-bar">AI-generated · Claude (Anthropic) · Not verbatim {theologian.name}{studyTime && ` · ${studyTime}s`}</div>
                 </div>
               </div>
 
@@ -649,11 +655,16 @@ export default function App() {
                     return (
                       <div key={i} className={`msg ${isUser ? "mu" : isGuard ? "mg" : "ma"}`}>
                         <div className="av">{isUser ? "D" : theologian.name[0]}</div>
-                        <div className="bbl">
-                          {isGuard && <span style={{ opacity: .7, flexShrink: 0 }}><ShieldIcon /></span>}
-                          {isUser || isGuard
-                            ? m.content
-                            : <ReactMarkdown>{m.content}</ReactMarkdown>}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: "78%" }}>
+                          <div className="bbl" style={{ maxWidth: "100%" }}>
+                            {isGuard && <span style={{ opacity: .7, flexShrink: 0 }}><ShieldIcon /></span>}
+                            {isUser || isGuard
+                              ? m.content
+                              : <ReactMarkdown>{m.content}</ReactMarkdown>}
+                          </div>
+                          {!isUser && m.duration && (
+                            <div className="msg-time">{m.duration}s</div>
+                          )}
                         </div>
                       </div>
                     );
