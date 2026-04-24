@@ -100,7 +100,7 @@ lectio-scriptura/
 
 ---
 
-## API Key Safety
+## [Important!] API Key Safety
 
 > **The API key must never appear in source code, browser network requests, or git history.**
 
@@ -120,7 +120,7 @@ FastAPI Backend (your server)
 Anthropic Claude API
 ```
 
-### Rules
+### Simple Rules
 
 | ✅ Safe | ❌ Never do this |
 |---|---|
@@ -138,7 +138,7 @@ Anthropic Claude API
 
 ---
 
-## Run Locally
+## Run Locally - Tested!
 
 ### Prerequisites
 - Python 3.11+
@@ -216,7 +216,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Run Headless (CLI / Script)
+## Run Headless (CLI / Script) - Tested!
 
 If you want to use the backend without the browser — e.g. for scripting, automation,
 or generating commentary from the terminal — you can call the API directly.
