@@ -106,11 +106,16 @@ async def chat(req: ChatRequest):
             system=req.system,
             messages=[m.model_dump() for m in req.messages],
         )
-        text = response.content[0].text
+        block = response.content[0] if response.content else None
+        if block is None or block.type != "text":
+            raise HTTPException(status_code=502, detail="Unexpected response format from Claude API.")
+        text = block.text
         if response.stop_reason == "max_tokens":
             text += "\n\n---\n*The response reached the length limit. Ask me to continue if you'd like more.*"
         return ChatResponse(text=text)
 
+    except HTTPException:
+        raise  # preserve HTTPExceptions we raise ourselves (e.g. bad content-type check)
     except anthropic.AuthenticationError:
         raise HTTPException(status_code=401, detail="Invalid Anthropic API key.")
     except anthropic.RateLimitError:

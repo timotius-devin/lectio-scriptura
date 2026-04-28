@@ -252,6 +252,7 @@ async function fetchPassage(reference, translation) {
   if (!res.ok) throw new Error("Passage not found. Try: John 3:16 or Romans 8:1-11");
   const data = await res.json();
   if (data.error) throw new Error(data.error);
+  if (!data.text) throw new Error("Bible API returned an empty passage. Try a different reference.");
   return { reference: data.reference, text: data.text.trim(), verses: data.verses };
 }
 
@@ -273,7 +274,21 @@ async function callClaude(messages, system) {
     throw new Error(err.detail || `API error ${res.status}`);
   }
   const data = await res.json();
+  if (typeof data.text !== "string") throw new Error("Unexpected response from server.");
   return data.text;
+}
+
+// ── Guardrail JSON parser ─────────────────────────────────────────
+// Claude sometimes wraps JSON in markdown fences or adds preamble text.
+// This handles all common formats rather than relying on bare JSON.parse.
+function parseGuardrail(raw) {
+  const s = raw.trim();
+  try { const p = JSON.parse(s); if (p?.guardrail) return p; } catch (_) {}
+  const fenceMatch = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) {
+    try { const p = JSON.parse(fenceMatch[1].trim()); if (p?.guardrail) return p; } catch (_) {}
+  }
+  return null;
 }
 
 // ── Build system prompt ───────────────────────────────────────────
@@ -303,17 +318,28 @@ do NOT answer it. Return this exact JSON and nothing else:
 {"guardrail":true,"message":"${guardrailMsg}"}
 `;
 
+  const accuracyRules = `
+ACCURACY RULES — ENFORCE STRICTLY:
+- Do NOT fabricate or invent direct quotes from this theologian's published works. Represent their documented theological positions and writing style only.
+- When citing confessional documents (WCF, WSC, Heidelberg Catechism, Belgic Confession, Canons of Dort, etc.) by chapter, article, or question number, only cite references you are confident exist. If uncertain of the exact reference, describe the doctrine without a specific citation number rather than risk an incorrect reference.
+- Stay strictly within the provided passage text. Do not quote, paraphrase, or reference Bible verses not present in the passage text below.
+- When engaging with Greek or Hebrew terms, limit yourself to terms with standard lexical support for words in this specific passage.
+`;
+
+  // Truncate priorCommentary to prevent system prompt from exceeding the 30,000-char backend limit.
+  const safeCommentary = priorCommentary ? priorCommentary.slice(0, 6000) : "";
+
   const ctx = [
     `Current passage: ${passageRef}`,
     `Passage text:\n${passageText}`,
-    priorCommentary ? `Your prior commentary on this passage:\n${priorCommentary}` : "",
+    safeCommentary ? `Your prior commentary on this passage:\n${safeCommentary}` : "",
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const lengthRule = "LENGTH RULE: You have a 5000-token output limit. Budget your response to finish naturally within it — always end with a complete sentence. Never trail off mid-thought. For commentary, aim for 600–900 words; for chat answers, 200–500 words.";
 
-  return [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, lengthRule, guardrail, ctx]
+  return [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, lengthRule, accuracyRules, guardrail, ctx]
     .filter(Boolean)
     .join("\n\n");
 }
@@ -391,7 +417,9 @@ export default function App() {
         uiLang === "id"
           ? `Tolong tulis tafsiran mendalam tentang perikop ini untuk studi Alkitab yang serius.\n\nPerikop: ${data.reference}\n\n${data.text}`
           : `Write a rich, deep commentary on this passage for serious Bible study.\n\nPassage: ${data.reference}\n\n${data.text}`;
-      setCommentary(await callClaude([{ role: "user", content: prompt }], system));
+      const raw = await callClaude([{ role: "user", content: prompt }], system);
+      const guarded = parseGuardrail(raw);
+      setCommentary(guarded ? guarded.message : raw);
       setStudyTime(((Date.now() - t0) / 1000).toFixed(1));
     } catch (e) {
       setError(e.message);
@@ -416,16 +444,14 @@ export default function App() {
       });
       const raw = await callClaude(newMsgs.map(m => ({ role: m.role, content: m.content })), system);
       const duration = ((Date.now() - t0) / 1000).toFixed(1);
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.guardrail) {
-          setChat([...newMsgs, { role: "assistant", content: parsed.message, guardrail: true, duration }]);
-          return;
-        }
-      } catch (_) {}
+      const guarded = parseGuardrail(raw);
+      if (guarded) {
+        setChat([...newMsgs, { role: "assistant", content: guarded.message, guardrail: true, duration }]);
+        return;
+      }
       setChat([...newMsgs, { role: "assistant", content: raw, duration }]);
     } catch (e) {
-      setError(e.message);
+      setChat([...newMsgs, { role: "assistant", content: e.message, chatError: true }]);
     } finally {
       setLoadingChat(false);
     }
@@ -517,6 +543,7 @@ export default function App() {
         .ma .bbl li{margin-bottom:4px;line-height:1.7}
         .ma .bbl blockquote{border-left:2px solid #c4a882;margin:0 0 10px;padding:2px 0 2px 12px;color:#b8a888;font-style:italic}
         .mg .bbl{background:#1a0e06;color:#cc9955;border:1px solid #3a2010;font-style:italic;display:flex;align-items:flex-start;gap:8px}
+        .me .bbl{background:#1c0808;color:#cc8888;border:1px solid #3c1212;font-style:italic;display:flex;align-items:flex-start;gap:8px}
         .av{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:3px;font-family:'Cinzel',serif}
         .mu .av{background:#1c1610;color:#c4a882}
         .ma .av,.mg .av{background:#130f08;color:#c4a882}
@@ -652,13 +679,14 @@ export default function App() {
                   {chatMessages.map((m, i) => {
                     const isUser = m.role === "user";
                     const isGuard = m.guardrail;
+                    const isError = m.chatError;
                     return (
-                      <div key={i} className={`msg ${isUser ? "mu" : isGuard ? "mg" : "ma"}`}>
+                      <div key={i} className={`msg ${isUser ? "mu" : isGuard ? "mg" : isError ? "me" : "ma"}`}>
                         <div className="av">{isUser ? "D" : theologian.name[0]}</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: "78%" }}>
                           <div className="bbl" style={{ maxWidth: "100%" }}>
                             {isGuard && <span style={{ opacity: .7, flexShrink: 0 }}><ShieldIcon /></span>}
-                            {isUser || isGuard
+                            {isUser || isGuard || isError
                               ? m.content
                               : <ReactMarkdown>{m.content}</ReactMarkdown>}
                           </div>
