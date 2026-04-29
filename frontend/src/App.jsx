@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 
 // ── Translations ──────────────────────────────────────────────────
@@ -182,31 +182,42 @@ const UI = {
 // ── Passage reference normaliser ──────────────────────────────────
 // Fuzzy-corrects the book name so minor typos ("Jhon", "Genisis") still work.
 const BOOKS = [
-  ["Genesis","gen","ge","gn"],["Exodus","exo","ex","exod"],["Leviticus","lev","le","lv"],
-  ["Numbers","num","nu","nm"],["Deuteronomy","deu","dt","deut"],["Joshua","jos","josh"],
-  ["Judges","jdg","jg","judg"],["Ruth","rut","ru"],["1 Samuel","1sa","1sam"],
-  ["2 Samuel","2sa","2sam"],["1 Kings","1ki","1kgs"],["2 Kings","2ki","2kgs"],
-  ["1 Chronicles","1ch","1chr","1chron"],["2 Chronicles","2ch","2chr","2chron"],
-  ["Ezra","ezr"],["Nehemiah","neh","ne"],["Esther","est","esth"],["Job","jb"],
-  ["Psalms","ps","psa","psalm"],["Proverbs","pro","pr","prov"],
-  ["Ecclesiastes","ecc","ec","eccl"],["Song of Solomon","sng","ss","song","sos"],
-  ["Isaiah","isa","is"],["Jeremiah","jer","je","jr"],["Lamentations","lam","la"],
-  ["Ezekiel","ezk","eze","ezek"],["Daniel","dan","da","dn"],["Hosea","hos","ho"],
-  ["Joel","jol","joe","jl"],["Amos","amo","am"],["Obadiah","oba","ob","obad"],
-  ["Jonah","jon","jnh"],["Micah","mic","mi"],["Nahum","nam","nah","na"],
-  ["Habakkuk","hab"],["Zephaniah","zep","zeph"],["Haggai","hag","hg"],
-  ["Zechariah","zec","zech"],["Malachi","mal","ml"],
-  ["Matthew","mat","mt","matt"],["Mark","mrk","mk","mr"],["Luke","luk","lk"],
-  ["John","jhn","jn"],["Acts","act"],["Romans","rom","ro","rm"],
-  ["1 Corinthians","1co","1cor"],["2 Corinthians","2co","2cor"],
-  ["Galatians","gal","ga"],["Ephesians","eph"],["Philippians","php","phil"],
-  ["Colossians","col"],["1 Thessalonians","1th","1thes","1thess"],
-  ["2 Thessalonians","2th","2thes","2thess"],["1 Timothy","1ti","1tim"],
-  ["2 Timothy","2ti","2tim"],["Titus","tit"],["Philemon","phm","phlm"],
-  ["Hebrews","heb"],["James","jas","jm"],["1 Peter","1pe","1pet"],
-  ["2 Peter","2pe","2pet"],["1 John","1jn","1jo","1jhn"],
-  ["2 John","2jn","2jo","2jhn"],["3 John","3jn","3jo","3jhn"],
-  ["Jude","jud"],["Revelation","rev","re","rv"],
+  ["Genesis","gen","ge","gn","kejadian","kej","genisis"],["Exodus","exo","ex","exod","keluaran","kel"],
+  ["Leviticus","lev","le","lv","imamat","ima"],["Numbers","num","nu","nm","bilangan","bil"],
+  ["Deuteronomy","deu","dt","deut","ulangan","ula","deutronomy"],["Joshua","jos","josh","yosua","yos"],
+  ["Judges","jdg","jg","judg","hakim-hakim","hak"],["Ruth","rut","ru"],
+  ["1 Samuel","1sa","1sam","1 samuel","1samuel"],["2 Samuel","2sa","2sam","2 samuel","2samuel"],
+  ["1 Kings","1ki","1kgs","1 raja-raja","1 raj","1raja"],["2 Kings","2ki","2kgs","2 raja-raja","2 raj","2raja"],
+  ["1 Chronicles","1ch","1chr","1chron","1 tawarikh","1 taw","1taw"],["2 Chronicles","2ch","2chr","2chron","2 tawarikh","2 taw","2taw"],
+  ["Ezra","ezr"],["Nehemiah","neh","ne","nehemia"],["Esther","est","esth","ester"],["Job","jb","ayub","ayb"],
+  ["Psalms","ps","psa","psalm","mazmur","maz","mzm","pslam"],["Proverbs","pro","pr","prov","amsal","ams","proverb"],
+  ["Ecclesiastes","ecc","ec","eccl","pengkhotbah","pkh","ecclesiasties","eclesiastes"],
+  ["Song of Solomon","sng","ss","song","sos","kidung agung","kidung","song of songs","canticles"],
+  ["Isaiah","isa","is","yesaya","yes","isiah","isaia"],["Jeremiah","jer","je","jr","yermia","yer","jerimiah"],
+  ["Lamentations","lam","la","ratapan","rat"],["Ezekiel","ezk","eze","ezek","yehezkiel","yeh","ezekial"],
+  ["Daniel","dan","da","dn","danial"],["Hosea","hos","ho"],
+  ["Joel","jol","joe","jl","yoel"],["Amos","amo","am"],
+  ["Obadiah","oba","ob","obad","obaja"],["Jonah","jon","jnh","yunus","yun"],
+  ["Micah","mic","mi","mikha","mik"],["Nahum","nam","nah","na"],
+  ["Habakkuk","hab","habakuk"],["Zephaniah","zep","zeph","zefanya","zef"],
+  ["Haggai","hag","hg","hagai"],["Zechariah","zec","zech","zakharia","zak"],
+  ["Malachi","mal","ml","maleakhi"],
+  ["Matthew","mat","mt","matt","matius","mathew"],["Mark","mrk","mk","mr","markus"],
+  ["Luke","luk","lk","lukas"],["John","jhn","jn","yohanes","yoh"],
+  ["Acts","act","kisah para rasul","kisah","kis"],["Romans","rom","ro","rm","roma"],
+  ["1 Corinthians","1co","1cor","1 korintus","1 kor","1kor"],["2 Corinthians","2co","2cor","2 korintus","2 kor","2kor"],
+  ["Galatians","gal","ga","galatia"],["Ephesians","eph","efesus","efe","ephesions"],
+  ["Philippians","php","phil","filipi","fil","phillipians","philipians"],
+  ["Colossians","col","kolose","kol","colosians"],
+  ["1 Thessalonians","1th","1thes","1thess","1 tesalonika","1 tes","1tes","1 thesalonians","1thessalonians"],
+  ["2 Thessalonians","2th","2thes","2thess","2 tesalonika","2 tes","2tes","2 thesalonians","2thessalonians"],
+  ["1 Timothy","1ti","1tim","1 timotius","1 tim","1timotius"],["2 Timothy","2ti","2tim","2 timotius","2 tim","2timotius"],
+  ["Titus","tit"],["Philemon","phm","phlm","filemon","philimon"],
+  ["Hebrews","heb","ibrani","ibr"],["James","jas","jm","yakobus","yak"],
+  ["1 Peter","1pe","1pet","1 petrus","1 ptr","1ptr"],["2 Peter","2pe","2pet","2 petrus","2 ptr","2ptr"],
+  ["1 John","1jn","1jo","1jhn","1 yohanes","1 yoh","1yoh"],["2 John","2jn","2jo","2jhn","2 yohanes","2 yoh","2yoh"],
+  ["3 John","3jn","3jo","3jhn","3 yohanes","3 yoh","3yoh"],
+  ["Jude","jud","yudas"],["Revelation","rev","re","rv","wahyu","why","revalation","revelations"],
 ];
 
 function levenshtein(a, b) {
@@ -222,16 +233,26 @@ function levenshtein(a, b) {
 function fuzzyBook(input) {
   const norm = input.toLowerCase().replace(/\s+/g, " ").trim();
   let best = null, bestDist = Infinity;
+  const prefixMatches = [];
   for (const [canonical, ...aliases] of BOOKS) {
     for (const form of [canonical.toLowerCase(), ...aliases]) {
       if (form === norm) return canonical;
-      if (norm.length >= 3 && form.startsWith(norm)) return canonical;
+      if (norm.length >= 3 && form.startsWith(norm)) {
+        const d = levenshtein(norm, canonical.toLowerCase());
+        prefixMatches.push({ canonical, dist: d });
+        break;
+      }
       const d = levenshtein(norm, form);
       if (d < bestDist) { bestDist = d; best = canonical; }
     }
   }
   const maxDist = norm.replace(/\s/g, "").length <= 4 ? 1 : 2;
-  return bestDist <= maxDist ? best : input;
+  if (bestDist <= maxDist) return best;
+  if (prefixMatches.length > 0) {
+    prefixMatches.sort((a, b) => a.dist - b.dist);
+    return prefixMatches[0].canonical;
+  }
+  return input;
 }
 
 function normalizeRef(raw) {
@@ -247,7 +268,7 @@ function normalizeRef(raw) {
 // Source: https://bible-api.com (free, open, no API key required)
 // Underlying Bible data: https://github.com/wldeh/bible-api
 async function fetchPassage(reference, translation) {
-  const url = `https://bible-api.com/${encodeURIComponent(reference)}?translation=${translation.apiCode}`;
+  const url = `${API_BASE}/api/bible?reference=${encodeURIComponent(reference)}&translation=${translation.apiCode}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Passage not found. Try: John 3:16 or Romans 8:1-11");
   const data = await res.json();
@@ -339,9 +360,11 @@ ACCURACY RULES — ENFORCE STRICTLY:
 
   const lengthRule = "LENGTH RULE: You have a 5000-token output limit. Budget your response to finish naturally within it — always end with a complete sentence. Never trail off mid-thought. For commentary, aim for 600–900 words; for chat answers, 200–500 words.";
 
-  return [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, lengthRule, accuracyRules, guardrail, ctx]
+  const cached = [THEOLOGIAN_PROMPTS[theologianId], REFORMED_KNOWLEDGE, langRule, lengthRule, accuracyRules]
     .filter(Boolean)
     .join("\n\n");
+  const uncached = [guardrail, ctx].filter(Boolean).join("\n\n");
+  return `${cached}\n\n[CACHE_BREAK]\n\n${uncached}`;
 }
 
 // ── Icons ─────────────────────────────────────────────────────────
@@ -395,6 +418,12 @@ export default function App() {
   const [openPicker, setOpenPicker]   = useState(null);
   const chatEndRef = useRef(null);
   const t = UI[uiLang];
+
+  const normalizedRef = useMemo(() => {
+    if (!passage.trim()) return null;
+    const norm = normalizeRef(passage.trim());
+    return norm !== passage.trim() ? norm : null;
+  }, [passage]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -484,7 +513,7 @@ export default function App() {
         .lang-opt:not(.on):hover{color:#c4a882;background:#17120b}
         .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:34px 42px}
         @media(max-width:840px){.main{padding:20px}.hdr{padding:18px 20px}.grid{grid-template-columns:1fr!important}}
-        .ctrl{display:flex;gap:10px;margin-bottom:26px;flex-wrap:wrap;align-items:stretch}
+        .ctrl{position:relative;display:flex;gap:10px;margin-bottom:26px;flex-wrap:wrap;align-items:stretch}
         .pin{flex:1;min-width:190px;background:#17120b;border:1px solid #1c1610;border-radius:7px;padding:12px 18px;color:#e2d6bc;font-family:'Crimson Pro',serif;font-size:17px;outline:none;transition:border-color .2s}
         .pin:focus{border-color:#c4a882}
         .pin::placeholder{color:#342a1a;font-style:italic}
@@ -583,6 +612,15 @@ export default function App() {
             <input className="pin" placeholder={t.passagePlaceholder} value={passage}
               onChange={e => setPassage(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleStudy()} />
+            {normalizedRef && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 4px)", left: 0,
+                fontSize: 12, fontStyle: "italic", color: "#7a9a55",
+                fontFamily: "'Source Code Pro', monospace",
+              }}>
+                → {normalizedRef}
+              </div>
+            )}
 
             <div className="pkr">
               <button className="pkr-btn" onClick={() => setOpenPicker(p => p === "trans" ? null : "trans")}>

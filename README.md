@@ -17,8 +17,9 @@
 8. [Deploy Frontend to Vercel (optional)](#deploy-frontend-to-vercel-optional)
 9. [Environment Variables Reference](#environment-variables-reference)
 10. [Theologians & Knowledge Base](#theologians--knowledge-base)
-11. [Guardrails](#guardrails)
-12. [Contributing](#contributing)
+11. [Caching](#caching)
+12. [Guardrails](#guardrails)
+13. [Contributing](#contributing)
 
 ---
 
@@ -418,6 +419,47 @@ Claude is given a detailed summary of eleven confessional documents as part of i
 system prompt on every request (see `App.jsx` → `REFORMED_KNOWLEDGE`).
 It is instructed to cite these documents specifically by chapter, article, or
 question number when relevant.
+
+---
+
+## Caching
+
+The app uses a three-tier in-memory cache to reduce API calls and speed up repeated
+requests. All caches are in-memory (cleared on server restart) — no Redis or external
+infrastructure needed.
+
+### Tier 1 — Response Cache (6-hour TTL)
+Full Claude API responses are cached by request hash. Duplicate Study requests (same
+passage, theologian, and language) skip the Claude API call entirely — the cached
+commentary is returned instantly.
+
+### Tier 2 — Prompt Caching (Anthropic built-in)
+The static portion of the system prompt (~10K chars: theologian voice, Reformed
+confessional knowledge base, accuracy rules) is marked for Anthropic's prompt caching
+via `cache_control: ephemeral`. Claude reuses the cached prefix across requests with
+the same theologian, reducing input token cost by ~90% for the cached portion.
+
+The frontend inserts a `[CACHE_BREAK]` delimiter between the static prefix and the
+passage-specific suffix. The backend splits the system prompt on this marker and
+passes it to Claude as a list of content blocks.
+
+### Tier 3 — Bible Passage Cache (24-hour TTL)
+Scripture text fetched from bible-api.com is cached via the backend proxy at
+`GET /api/bible`. Bible passages never change, so a long TTL is safe. The frontend
+calls this backend endpoint instead of bible-api.com directly.
+
+### Cache architecture
+```
+Browser → Backend → RESPONSE_CACHE (6h) ── hit? → return cached response
+                         │
+                         └── miss? → Claude API ← PROMPT_CACHE (ephemeral)
+                                         │
+                                         └── store in RESPONSE_CACHE → return
+
+Browser → Backend → BIBLE_CACHE (24h) ── hit? → return cached passage
+                         │
+                         └── miss? → bible-api.com → store → return
+```
 
 ---
 
